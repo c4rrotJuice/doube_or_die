@@ -1,0 +1,2 @@
+-- Policies are defined in migrations/001_init.sql for one-pass setup.
+-- Keep this file as a reference for future policy hardening iterations.
