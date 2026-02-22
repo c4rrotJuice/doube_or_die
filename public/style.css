@@ -6,6 +6,9 @@
   --accent: #53f6da;
   --accent-2: #ff4fd8;
   --danger: #ff4f70;
+  --warning: #ffb347;
+  --success: #68f596;
+  --focus-ring: #f3dc7f;
 }
 
 * {
@@ -30,14 +33,23 @@ body[data-theme='light'] {
 }
 
 .shell {
-  width: min(880px, 100%);
+  width: min(960px, 100%);
   margin: 0 auto;
-  padding: 2rem 1rem 3rem;
+  padding: 1rem 0.9rem 6rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.hero-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(2rem, 6vw, 3rem);
+  font-size: clamp(1.9rem, 8vw, 3rem);
 }
 
 .badge {
@@ -52,12 +64,12 @@ body[data-theme='light'] {
 
 .subtitle,
 .message,
-.phase {
+.phase,
+.modal-hint {
   color: var(--muted);
 }
 
 .panel {
-  margin-top: 1rem;
   padding: 1rem;
   border: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
   border-radius: 14px;
@@ -66,10 +78,19 @@ body[data-theme='light'] {
 
 .value-display {
   text-align: center;
-  font-size: clamp(3rem, 12vw, 6rem);
+  font-size: clamp(3rem, 15vw, 6rem);
   font-weight: 800;
   margin: 1rem 0 0.4rem;
   letter-spacing: -0.04em;
+  transform-origin: center;
+}
+
+.value-display.pop {
+  animation: value-pop 220ms ease-out;
+}
+
+.game-panel.shake {
+  animation: panel-shake 300ms ease-in-out;
 }
 
 .risk-meter-wrap {
@@ -97,20 +118,36 @@ body[data-theme='light'] {
   transition: width 180ms ease-out;
 }
 
-.actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+.risk-fill.danger {
+  animation: danger-pulse 700ms ease-in-out infinite;
+  box-shadow: 0 0 0.8rem color-mix(in oklab, var(--danger) 65%, transparent);
 }
 
-button {
+.actions {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+button,
+.ghost-btn {
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: #07050f;
   font-weight: 700;
-  padding: 0.75rem 1.1rem;
+  min-height: 52px;
+  padding: 0.9rem 1.1rem;
   cursor: pointer;
+  touch-action: manipulation;
+}
+
+.ghost-btn {
+  background: color-mix(in oklab, var(--text) 12%, transparent);
+  color: var(--text);
+  min-height: auto;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.88rem;
 }
 
 button:disabled {
@@ -118,15 +155,112 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+.ghost-btn:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .settings-panel {
   display: grid;
   gap: 0.6rem;
 }
 
-select {
-  margin-left: 0.35rem;
+.toast-region {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0.8rem;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.toast {
+  width: min(92vw, 460px);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--text) 20%, transparent);
+  background: color-mix(in oklab, var(--panel) 90%, black);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32);
+  font-size: 0.95rem;
+  pointer-events: auto;
+}
+
+.toast.success { border-color: color-mix(in oklab, var(--success) 70%, transparent); }
+.toast.warning { border-color: color-mix(in oklab, var(--warning) 70%, transparent); }
+.toast.error { border-color: color-mix(in oklab, var(--danger) 80%, transparent); }
+
+.how-to-play-modal {
+  width: min(92vw, 520px);
+  border: 1px solid color-mix(in oklab, var(--text) 15%, transparent);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 1rem 1rem 0.8rem;
+}
+
+.how-to-play-modal::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (min-width: 800px) {
+  .shell {
+    grid-template-columns: 2fr 1fr;
+    grid-template-areas:
+      'hero hero'
+      'game stats'
+      'game settings';
+    padding: 2rem 1rem 4rem;
+  }
+
+  .hero {
+    grid-area: hero;
+  }
+
+  .game-panel {
+    grid-area: game;
+  }
+
+  .stats-panel {
+    grid-area: stats;
+  }
+
+  .settings-panel {
+    grid-area: settings;
+  }
+}
+
+@keyframes value-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+@keyframes panel-shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes danger-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 body[data-reduced-motion='true'] * {
   transition: none !important;
+  animation: none !important;
 }

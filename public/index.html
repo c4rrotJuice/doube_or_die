@@ -9,51 +9,78 @@
   <body data-theme="dark" data-reduced-motion="false">
     <main class="shell">
       <header class="hero">
-        <p class="badge">Offline mode</p>
+        <div class="hero-top-row">
+          <p class="badge">Offline mode</p>
+          <button id="howToPlayBtn" class="ghost-btn" type="button" aria-haspopup="dialog" aria-controls="howToPlayModal">
+            How to Play
+          </button>
+        </div>
         <h1>Double or Die</h1>
         <p class="subtitle">Push your luck. Bank the multiplier before the crash.</p>
       </header>
 
-      <section class="panel game-panel">
-        <p class="phase">Phase: <strong id="phaseOutput">IDLE</strong></p>
-        <div class="value-display" id="valueOutput">x1</div>
-        <p class="message" id="messageOutput">Press DOUBLE to begin.</p>
+      <section class="panel game-panel" aria-label="Game status and controls">
+        <p class="phase">Phase: <strong id="phaseOutput" aria-live="polite">IDLE</strong></p>
+        <div class="value-display" id="valueOutput" aria-live="polite">x1</div>
+        <p class="message" id="messageOutput" aria-live="polite">Press DOUBLE to begin.</p>
 
         <div class="risk-meter-wrap">
           <div class="risk-header">
             <span>Next DOUBLE crash risk</span>
             <strong id="riskValue">0.0%</strong>
           </div>
-          <div class="risk-meter">
+          <div class="risk-meter" role="progressbar" aria-label="Crash risk meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
             <div class="risk-fill" id="riskFill"></div>
           </div>
         </div>
 
         <div class="actions">
-          <button id="doubleBtn" type="button">START + DOUBLE</button>
-          <button id="cashOutBtn" type="button" disabled>CASH OUT</button>
+          <button id="doubleBtn" type="button" aria-label="Double the current run">
+            START + DOUBLE
+          </button>
+          <button id="cashOutBtn" type="button" disabled aria-label="Cash out current multiplier">
+            CASH OUT
+          </button>
         </div>
       </section>
 
-      <section class="panel stats-panel">
+      <section class="panel stats-panel" aria-label="Progress stats">
         <h2>Local progress</h2>
         <p>Best score: <strong id="bestScoreOutput">x1</strong></p>
         <p>Lifetime banked: <strong id="lifetimeBankedOutput">x0</strong></p>
         <p>Runs played: <strong id="runsPlayedOutput">0</strong></p>
       </section>
 
-      <section class="panel settings-panel">
+      <section class="panel settings-panel" aria-label="Game settings">
         <h2>Settings (local only)</h2>
-        <label>Theme
-          <select id="themeSelect">
+        <label
+          >Theme
+          <select id="themeSelect" aria-label="Theme selection">
             <option value="dark">Dark</option>
             <option value="light">Light</option>
           </select>
         </label>
-        <label><input id="reducedMotionToggle" type="checkbox" /> Reduced motion</label>
-        <label><input id="soundToggle" type="checkbox" /> Sound (placeholder)</label>
+        <label><input id="reducedMotionToggle" type="checkbox" aria-label="Reduce animations" /> Reduced motion</label>
+        <label><input id="soundToggle" type="checkbox" aria-label="Enable sound" /> Sound (placeholder)</label>
       </section>
     </main>
+
+    <aside id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></aside>
+
+    <dialog id="howToPlayModal" class="how-to-play-modal" aria-labelledby="howToPlayTitle">
+      <h2 id="howToPlayTitle">How to Play</h2>
+      <ol>
+        <li>Tap <strong>START + DOUBLE</strong> to begin a run and double your multiplier.</li>
+        <li>Each double increases both reward and crash risk.</li>
+        <li>Use <strong>CASH OUT</strong> before a crash to bank your multiplier.</li>
+        <li>If you crash, the run ends with no banked gain.</li>
+      </ol>
+      <p class="modal-hint">Keyboard: D = Double, C = Cash Out, H = Open help, Esc = Close modal.</p>
+      <form method="dialog" class="modal-actions">
+        <button id="closeHowToPlayBtn" type="submit">Got it</button>
+      </form>
+    </dialog>
+
     <script type="module" src="./game.js"></script>
   </body>
 </html>
