@@ -3,15 +3,29 @@ import {
   animateCrash,
   applySettings,
   createToastSystem,
+  renderAuthState,
   renderGame,
+  setupAuthModal,
   setupHowToPlayModal,
   setupKeyboardSupport,
+  setupProfileOnboardingModal,
   setupSettingsUI,
 } from './ui.js';
 import { loadSettings, loadStats, saveSettings, saveStats, updateStatsForRun } from './storage.js';
+import {
+  getProfile,
+  getSession,
+  onAuthStateChange,
+  signInWithGoogle,
+  signInWithMagicLink,
+  signOut,
+  supabase,
+  upsertProfile,
+} from './supabase.js';
 
 const doubleBtn = document.querySelector('#doubleBtn');
 const cashOutBtn = document.querySelector('#cashOutBtn');
+const signOutBtn = document.querySelector('#signOutBtn');
 
 const game = new GameEngine();
 const toasts = createToastSystem();
@@ -19,12 +33,99 @@ const helpModal = setupHowToPlayModal();
 let stats = loadStats();
 let settings = loadSettings();
 let previousSnapshot = null;
+let authState = { user: null, profile: null };
+
+const authModal = setupAuthModal({
+  async magicLink(email) {
+    if (!email) {
+      toasts.show('warning', 'Enter an email to receive a magic link.');
+      return;
+    }
+
+    const { error } = await signInWithMagicLink(email);
+    if (error) {
+      toasts.show('error', error.message);
+      return;
+    }
+
+    toasts.show('success', 'Magic link sent. Check your inbox.');
+    authModal.close();
+  },
+  async google() {
+    const { error } = await signInWithGoogle();
+    if (error) {
+      toasts.show('error', error.message);
+    }
+  },
+});
+
+const profileModal = setupProfileOnboardingModal({
+  async submit({ username, theme }) {
+    if (!authState.user) {
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+      toasts.show('warning', 'Username must be 3-24 chars using letters, numbers, or _.');
+      return;
+    }
+
+    const { data, error } = await upsertProfile({
+      id: authState.user.id,
+      username,
+      theme,
+    });
+
+    if (error) {
+      if (error.code === '23505') {
+        toasts.show('error', 'That username is already taken.');
+      } else {
+        toasts.show('error', error.message);
+      }
+      return;
+    }
+
+    authState = { ...authState, profile: data };
+    settings = { ...settings, theme: data.theme };
+    saveSettings(settings);
+    profileModal.close();
+    syncUI();
+    toasts.show('success', 'Profile saved.');
+  },
+});
 
 function syncUI() {
   applySettings(settings);
+  renderAuthState(authState);
   const snapshot = game.snapshot();
   renderGame(snapshot, stats, previousSnapshot);
   previousSnapshot = snapshot;
+}
+
+async function syncAuthState(sessionUser) {
+  if (!sessionUser) {
+    authState = { user: null, profile: null };
+    syncUI();
+    return;
+  }
+
+  const { data: profile, error } = await getProfile(sessionUser.id);
+  if (error) {
+    toasts.show('error', error.message);
+  }
+
+  authState = { user: sessionUser, profile: profile ?? null };
+
+  if (profile?.theme) {
+    settings = { ...settings, theme: profile.theme };
+    saveSettings(settings);
+  }
+
+  syncUI();
+
+  if (!profile) {
+    profileModal.open();
+  }
 }
 
 function handleRunEnd(snapshotBefore, snapshotAfter) {
@@ -64,6 +165,14 @@ function onCashOut() {
 
 doubleBtn.addEventListener('click', onDouble);
 cashOutBtn.addEventListener('click', onCashOut);
+signOutBtn.addEventListener('click', async () => {
+  const { error } = await signOut();
+  if (error) {
+    toasts.show('error', error.message);
+    return;
+  }
+  toasts.show('success', 'Signed out.');
+});
 
 setupKeyboardSupport({
   double: onDouble,
@@ -75,7 +184,34 @@ setupKeyboardSupport({
 setupSettingsUI(settings, (nextSettings) => {
   settings = nextSettings;
   saveSettings(settings);
+
+  if (authState.user && authState.profile) {
+    upsertProfile({
+      id: authState.user.id,
+      username: authState.profile.username,
+      theme: settings.theme,
+    }).then(({ data }) => {
+      authState = { ...authState, profile: data ?? authState.profile };
+      syncUI();
+    });
+  }
+
   syncUI();
 });
 
+async function bootstrapAuth() {
+  if (!supabase) {
+    syncUI();
+    return;
+  }
+
+  const { data } = await getSession();
+  await syncAuthState(data.session?.user ?? null);
+
+  onAuthStateChange(async (_event, session) => {
+    await syncAuthState(session?.user ?? null);
+  });
+}
+
+bootstrapAuth();
 syncUI();

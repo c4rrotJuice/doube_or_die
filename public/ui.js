@@ -105,6 +105,107 @@ export function setupHowToPlayModal() {
   return { open, close, isOpen: () => modal.open };
 }
 
+export function setupAuthModal(actions) {
+  const modal = document.querySelector('#authModal');
+  const openBtn = document.querySelector('#authBtn');
+  const closeBtn = document.querySelector('#closeAuthBtn');
+  const emailForm = document.querySelector('#magicLinkForm');
+  const emailInput = document.querySelector('#emailInput');
+  const googleBtn = document.querySelector('#googleSignInBtn');
+
+  const open = () => {
+    if (modal && !modal.open) {
+      modal.showModal();
+      emailInput?.focus();
+    }
+  };
+
+  const close = () => {
+    if (modal?.open) {
+      modal.close();
+      openBtn?.focus();
+    }
+  };
+
+  openBtn?.addEventListener('click', open);
+  closeBtn?.addEventListener('click', close);
+
+  modal?.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    close();
+  });
+
+  emailForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    actions.magicLink(emailInput.value.trim());
+  });
+
+  googleBtn?.addEventListener('click', () => {
+    actions.google();
+  });
+
+  return { open, close };
+}
+
+export function renderAuthState(authState) {
+  const guestBadge = document.querySelector('#guestBadge');
+  const userPill = document.querySelector('#userPill');
+  const profileOutput = document.querySelector('#profileSummary');
+  const authBtn = document.querySelector('#authBtn');
+  const signOutBtn = document.querySelector('#signOutBtn');
+
+  if (!authState?.user) {
+    guestBadge.hidden = false;
+    userPill.hidden = true;
+    authBtn.hidden = false;
+    signOutBtn.hidden = true;
+    return;
+  }
+
+  const username = authState.profile?.username ?? authState.user.email ?? 'Player';
+  const title = authState.profile?.title ?? 'Rookie';
+
+  profileOutput.textContent = `${username} · ${title}`;
+  guestBadge.hidden = true;
+  userPill.hidden = false;
+  authBtn.hidden = true;
+  signOutBtn.hidden = false;
+}
+
+export function setupProfileOnboardingModal(actions) {
+  const modal = document.querySelector('#profileModal');
+  const form = document.querySelector('#profileForm');
+  const usernameInput = document.querySelector('#usernameInput');
+  const themeSelect = document.querySelector('#profileThemeSelect');
+
+  const open = () => {
+    if (!modal.open) {
+      modal.showModal();
+      usernameInput.focus();
+    }
+  };
+
+  const close = () => {
+    if (modal.open) {
+      modal.close();
+    }
+  };
+
+  modal.addEventListener('cancel', (event) => {
+    event.preventDefault();
+  });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    actions.submit({
+      username: usernameInput.value.trim(),
+      theme: themeSelect.value,
+    });
+  });
+
+  return { open, close };
+}
+
 export function setupKeyboardSupport(actions) {
   document.addEventListener('keydown', (event) => {
     const targetTag = event.target?.tagName;

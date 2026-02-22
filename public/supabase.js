@@ -1,9 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { assertEnv } from './utils.js';
 
+const env = window.__ENV__ ?? {};
+
 const config = {
-  url: window.__ENV__?.PUBLIC_SUPABASE_URL ?? '',
-  anonKey: window.__ENV__?.PUBLIC_SUPABASE_ANON_KEY ?? '',
+  url: env.PUBLIC_SUPABASE_URL || window.localStorage.getItem('PUBLIC_SUPABASE_URL') || '',
+  anonKey: env.PUBLIC_SUPABASE_ANON_KEY || window.localStorage.getItem('PUBLIC_SUPABASE_ANON_KEY') || '',
 };
 
 assertEnv('PUBLIC_SUPABASE_URL', config.url);
@@ -11,10 +13,21 @@ assertEnv('PUBLIC_SUPABASE_ANON_KEY', config.anonKey);
 
 export const supabase = config.url && config.anonKey ? createClient(config.url, config.anonKey) : null;
 
+function getRedirectUrl() {
+  return window.location.origin;
+}
+
 export async function signInWithMagicLink(email) {
   if (!supabase) throw new Error('Supabase is not configured.');
-  // TODO: move email collection and redirect URL to a dedicated auth modal.
-  return supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+  return supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: getRedirectUrl() } });
+}
+
+export async function signInWithGoogle() {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: getRedirectUrl() },
+  });
 }
 
 export async function signOut() {
@@ -27,20 +40,34 @@ export async function getSession() {
   return supabase.auth.getSession();
 }
 
+export function onAuthStateChange(callback) {
+  if (!supabase) {
+    return { data: { subscription: { unsubscribe() {} } } };
+  }
+  return supabase.auth.onAuthStateChange(callback);
+}
+
+export async function getProfile(userId) {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  return supabase.from('profiles').select('id, username, theme, title').eq('id', userId).maybeSingle();
+}
+
+export async function upsertProfile(profile) {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  return supabase.from('profiles').upsert(profile, { onConflict: 'id' }).select('id, username, theme, title').single();
+}
+
 export async function fetchLeaderboard() {
   if (!supabase) throw new Error('Supabase is not configured.');
-  // TODO: consider switching to direct view reads once schema is stable.
   return supabase.functions.invoke('getLeaderboard', { body: {} });
 }
 
 export async function startRun() {
   if (!supabase) throw new Error('Supabase is not configured.');
-  // TODO: call before game loop starts.
   return supabase.functions.invoke('startRun', { body: {} });
 }
 
 export async function submitRun(payload) {
   if (!supabase) throw new Error('Supabase is not configured.');
-  // TODO: attach client digest once gameplay is implemented.
   return supabase.functions.invoke('submitRun', { body: payload });
 }

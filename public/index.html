@@ -10,10 +10,17 @@
     <main class="shell">
       <header class="hero">
         <div class="hero-top-row">
-          <p class="badge">Offline mode</p>
-          <button id="howToPlayBtn" class="ghost-btn" type="button" aria-haspopup="dialog" aria-controls="howToPlayModal">
-            How to Play
-          </button>
+          <div class="hero-status-wrap">
+            <p id="guestBadge" class="badge">Guest mode</p>
+            <p id="userPill" class="badge user-pill" hidden><span id="profileSummary"></span></p>
+          </div>
+          <div class="hero-actions">
+            <button id="authBtn" class="ghost-btn" type="button" aria-haspopup="dialog" aria-controls="authModal">Sign in</button>
+            <button id="signOutBtn" class="ghost-btn" type="button" hidden>Sign out</button>
+            <button id="howToPlayBtn" class="ghost-btn" type="button" aria-haspopup="dialog" aria-controls="howToPlayModal">
+              How to Play
+            </button>
+          </div>
         </div>
         <h1>Double or Die</h1>
         <p class="subtitle">Push your luck. Bank the multiplier before the crash.</p>
@@ -52,7 +59,7 @@
       </section>
 
       <section class="panel settings-panel" aria-label="Game settings">
-        <h2>Settings (local only)</h2>
+        <h2>Settings</h2>
         <label
           >Theme
           <select id="themeSelect" aria-label="Theme selection">
@@ -66,6 +73,35 @@
     </main>
 
     <aside id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></aside>
+
+    <dialog id="authModal" class="how-to-play-modal" aria-labelledby="authTitle">
+      <h2 id="authTitle">Sign in</h2>
+      <p class="modal-hint">Use a magic link or continue with Google.</p>
+      <form id="magicLinkForm" class="auth-form">
+        <label for="emailInput">Email</label>
+        <input id="emailInput" type="email" required placeholder="you@example.com" />
+        <button type="submit">Send magic link</button>
+      </form>
+      <button id="googleSignInBtn" type="button" class="google-btn">Continue with Google</button>
+      <form method="dialog" class="modal-actions">
+        <button id="closeAuthBtn" type="submit">Close</button>
+      </form>
+    </dialog>
+
+    <dialog id="profileModal" class="how-to-play-modal" aria-labelledby="profileTitle">
+      <h2 id="profileTitle">Complete your profile</h2>
+      <p class="modal-hint">Pick a unique username and your preferred theme.</p>
+      <form id="profileForm" class="auth-form">
+        <label for="usernameInput">Username</label>
+        <input id="usernameInput" type="text" minlength="3" maxlength="24" required pattern="[a-zA-Z0-9_]{3,24}" />
+        <label for="profileThemeSelect">Theme</label>
+        <select id="profileThemeSelect">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+        <button type="submit">Save profile</button>
+      </form>
+    </dialog>
 
     <dialog id="howToPlayModal" class="how-to-play-modal" aria-labelledby="howToPlayTitle">
       <h2 id="howToPlayTitle">How to Play</h2>
