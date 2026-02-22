@@ -134,12 +134,52 @@ export async function fetchPlayerSeasonRank({ seasonId, userId }) {
 
 export async function startRun() {
   if (!supabase) throw new Error('Supabase is not configured.');
-  return supabase.functions.invoke('startRun', { body: {} });
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    return { data: null, error: sessionError };
+  }
+
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    return {
+      data: null,
+      error: {
+        message: 'You must be signed in to start a verified run.',
+      },
+    };
+  }
+
+  return supabase.functions.invoke('startRun', {
+    body: {},
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
 }
 
 export async function submitRun(payload) {
   if (!supabase) throw new Error('Supabase is not configured.');
-  return supabase.functions.invoke('submitRun', { body: payload });
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    return { data: null, error: sessionError };
+  }
+
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    return {
+      data: null,
+      error: {
+        message: 'You must be signed in to submit a verified run.',
+      },
+    };
+  }
+
+  return supabase.functions.invoke('submitRun', {
+    body: payload,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
 }
 
 
