@@ -13,6 +13,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const MAX_DIGEST_BYTES = 16_000;
+const MIN_ACTION_DELTA_MS = 60;
+const MAX_DURATION_MS = 2 * 60 * 1000;
+const MAX_SUBMITS_PER_MINUTE = 20;
+
+function isPowerOfTwoScore(score: number, doubles: number) {
+  if (!Number.isInteger(score) || !Number.isInteger(doubles) || doubles < 0 || score < 1) {
+    return false;
+  }
+
+  const expected = 2 ** doubles;
+  return Number.isSafeInteger(expected) && score === expected;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -34,8 +48,26 @@ Deno.serve(async (req) => {
   }
 
   const payload = (await req.json().catch(() => ({}))) as SubmitPayload;
-  if (!payload.run_token || payload.final_score == null || payload.doubles == null || payload.duration_ms == null || !payload.digest) {
+  if (
+    !payload.run_token
+    || payload.final_score == null
+    || payload.doubles == null
+    || payload.duration_ms == null
+    || !payload.digest
+  ) {
     return new Response(JSON.stringify({ error: 'Invalid request body.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (
+    !Number.isInteger(payload.final_score)
+    || !Number.isInteger(payload.doubles)
+    || !Number.isInteger(payload.duration_ms)
+    || payload.digest.length > MAX_DIGEST_BYTES
+  ) {
+    return new Response(JSON.stringify({ accepted: false, error: 'Invalid metric types.' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -56,101 +88,77 @@ Deno.serve(async (req) => {
 
   const userId = userData.user.id;
 
-  const { data: tokenRow, error: tokenError } = await admin
-    .from('run_tokens')
-    .select('token_id, user_id, season_id, expires_at, used')
-    .eq('token_id', payload.run_token)
-    .maybeSingle();
-
-  if (tokenError || !tokenRow || tokenRow.user_id !== userId || tokenRow.used) {
-    return new Response(JSON.stringify({ accepted: false, error: 'Invalid or used run token.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  if (new Date(tokenRow.expires_at).getTime() < Date.now()) {
-    return new Response(JSON.stringify({ accepted: false, error: 'Run token expired.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // TODO(anti-cheat): replace basic checks with deterministic run replay verification.
-  if (payload.final_score < 0 || payload.doubles < 0 || payload.duration_ms < 0) {
-    return new Response(JSON.stringify({ accepted: false, error: 'Invalid metrics.' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  const { error: useError } = await admin.from('run_tokens').update({ used: true }).eq('token_id', tokenRow.token_id);
-  if (useError) {
-    return new Response(JSON.stringify({ accepted: false, error: 'Failed to consume token.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  const { data: runRow, error: runError } = await admin
+  const { count: recentSubmitCount, error: rateError } = await admin
     .from('runs')
-    .insert({
-      user_id: userId,
-      season_id: tokenRow.season_id,
-      score: payload.final_score,
-      doubles: payload.doubles,
-      duration_ms: payload.duration_ms,
-      digest: payload.digest,
-      is_valid: true,
-    })
-    .select('id, score')
-    .single();
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', new Date(Date.now() - 60_000).toISOString());
 
-  if (runError || !runRow) {
-    return new Response(JSON.stringify({ accepted: false, error: 'Failed to write run.' }), {
+  if (rateError) {
+    return new Response(JSON.stringify({ accepted: false, error: 'Rate-limit check failed.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
-  const { data: currentBoard } = await admin
-    .from('leaderboard')
-    .select('best_score')
-    .eq('season_id', tokenRow.season_id)
+  if ((recentSubmitCount ?? 0) >= MAX_SUBMITS_PER_MINUTE) {
+    return new Response(JSON.stringify({ accepted: false, error: 'Rate limit exceeded. Try again shortly.' }), {
+      status: 429,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const minimumExpectedDuration = payload.doubles * MIN_ACTION_DELTA_MS;
+  if (
+    payload.duration_ms < minimumExpectedDuration
+    || payload.duration_ms > MAX_DURATION_MS
+    || !isPowerOfTwoScore(payload.final_score, payload.doubles)
+  ) {
+    return new Response(JSON.stringify({ accepted: false, error: 'Run verification failed.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const nowIso = new Date().toISOString();
+  const { data: tokenRows, error: useError } = await admin
+    .from('run_tokens')
+    .update({ used: true, consumed_at: nowIso })
+    .eq('token_id', payload.run_token)
     .eq('user_id', userId)
-    .maybeSingle();
+    .eq('used', false)
+    .gt('expires_at', nowIso)
+    .select('token_id, season_id')
+    .limit(1);
 
-  const newBest = !currentBoard || runRow.score > currentBoard.best_score;
-
-  if (newBest) {
-    await admin.from('leaderboard').upsert({
-      season_id: tokenRow.season_id,
-      user_id: userId,
-      best_score: runRow.score,
-      best_run_id: runRow.id,
-      updated_at: new Date().toISOString(),
+  if (useError || !tokenRows?.length) {
+    return new Response(JSON.stringify({ accepted: false, error: 'Invalid, expired, or reused run token.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
-  const { data: crownRow } = await admin
-    .from('crown')
-    .select('score, user_id')
-    .eq('season_id', tokenRow.season_id)
-    .maybeSingle();
+  const tokenRow = tokenRows[0];
 
-  const crownStolen = Boolean(!crownRow || runRow.score > crownRow.score);
+  const { data: submitResult, error: submitError } = await admin.rpc('submit_verified_run', {
+    p_user_id: userId,
+    p_season_id: tokenRow.season_id,
+    p_score: payload.final_score,
+    p_doubles: payload.doubles,
+    p_duration_ms: payload.duration_ms,
+    p_digest: payload.digest,
+  });
 
-  if (crownStolen) {
-    await admin.from('crown').upsert({
-      season_id: tokenRow.season_id,
-      user_id: userId,
-      score: runRow.score,
-      run_id: runRow.id,
-      updated_at: new Date().toISOString(),
+  if (submitError || !submitResult?.length) {
+    return new Response(JSON.stringify({ accepted: false, error: 'Failed to persist verified run.' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
-  return new Response(JSON.stringify({ accepted: true, new_best: newBest, crown_stolen: crownStolen }), {
+  const result = submitResult[0];
+
+  return new Response(JSON.stringify({ accepted: true, new_best: result.new_best, crown_stolen: result.crown_stolen }), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });

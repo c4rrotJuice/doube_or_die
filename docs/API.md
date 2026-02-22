@@ -1,10 +1,10 @@
-# API contract (stubs)
+# API contract
 
 All endpoints are Supabase Edge Functions invoked via `/functions/v1/<name>`.
 Auth required for `startRun` and `submitRun` (Bearer access token).
 
 ## `POST /functions/v1/startRun`
-Issue a short-lived run token for the active season.
+Issue a short-lived single-use run token for the active season.
 
 ### Request
 ```json
@@ -19,6 +19,16 @@ Issue a short-lived run token for the active season.
   "season_id": "uuid"
 }
 ```
+
+### Token schema (`public.run_tokens`)
+- `token_id uuid`: server-issued run token (single use).
+- `user_id uuid`: owner user id.
+- `season_id uuid`: season binding.
+- `server_nonce text`: random server-side nonce.
+- `issued_at timestamptz`: token mint time.
+- `expires_at timestamptz`: hard TTL (~2 min).
+- `used boolean`: consumed flag.
+- `consumed_at timestamptz`: first successful submit timestamp.
 
 ### Errors
 - `401` missing/invalid auth
@@ -35,9 +45,11 @@ Submit a completed run for verification and leaderboard updates.
   "final_score": 6400,
   "doubles": 7,
   "duration_ms": 18250,
-  "digest": "sha256:..."
+  "digest": "{\"v\":1,\"actions\":[...] }"
 }
 ```
+
+`digest` is a structured JSON string with action log and timing deltas.
 
 ### Response 200
 ```json
@@ -48,10 +60,19 @@ Submit a completed run for verification and leaderboard updates.
 }
 ```
 
+### Validation checks
+- Token is consumed via conditional update, rejecting reused tokens.
+- Token owner must match authenticated user.
+- Token must be unexpired.
+- Score must match doubles (`score === 2^doubles`).
+- Duration must be plausible (`duration_ms >= doubles * min_delta` and under max run time).
+- Per-user submit rate limit enforced (`429` when exceeded).
+
 ### Errors
-- `400` bad payload, expired/used token, invalid metrics
+- `400` bad payload, expired/used token, invalid verification checks
 - `401` missing/invalid auth
-- `500` write or verification failure
+- `429` submit rate limit exceeded
+- `500` write/verification failure
 
 ## `POST /functions/v1/getLeaderboard`
 Return active-season leaderboard and crown snapshot.
