@@ -1,0 +1,8 @@
+[functions.startRun]
+verify_jwt = false
+
+[functions.submitRun]
+verify_jwt = false
+
+[functions.getLeaderboard]
+verify_jwt = false

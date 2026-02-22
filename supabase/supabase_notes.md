@@ -23,6 +23,8 @@ Optional hardening secrets (phase 2+):
 - `MAX_SCORE_PER_SECOND`
 
 ## 5) Deploy functions
+This repo includes `supabase/config.toml` with `verify_jwt = false` for edge functions so CORS preflight `OPTIONS` requests are not rejected before function code runs. Each function still validates bearer tokens manually for protected endpoints.
+
 ```bash
 supabase functions deploy startRun
 supabase functions deploy submitRun
