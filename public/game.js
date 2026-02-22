@@ -400,7 +400,7 @@ function handleRunEnd(snapshotBefore, snapshotAfter) {
     saveStats(stats);
   }
 
-  if (snapshotBefore.phase === 'RUNNING' && snapshotAfter.phase === 'SUMMARY' && snapshotAfter.outcome === 'crashed') {
+  if (snapshotAfter.phase === 'SUMMARY' && snapshotAfter.outcome === 'crashed') {
     animateCrash();
     resetRunVerification();
     toasts.show('error', 'Crash! Run ended with no banked multiplier.');
