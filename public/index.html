@@ -70,6 +70,30 @@
         <label><input id="reducedMotionToggle" type="checkbox" aria-label="Reduce animations" /> Reduced motion</label>
         <label><input id="soundToggle" type="checkbox" aria-label="Enable sound" /> Sound (placeholder)</label>
       </section>
+
+      <section class="panel leaderboard-panel" aria-label="Season leaderboard">
+        <div class="leaderboard-header">
+          <h2>Season leaderboard</h2>
+          <p id="seasonCountdown" class="leaderboard-countdown" aria-live="polite">Loading season…</p>
+        </div>
+        <p id="leaderboardSummary" class="modal-hint">Top 50 players this season.</p>
+        <div class="leaderboard-table-wrap">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th scope="col">Rank</th>
+                <th scope="col">Player</th>
+                <th scope="col">Score</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardRows">
+              <tr>
+                <td colspan="3" class="leaderboard-empty">Loading leaderboard…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
 
     <aside id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></aside>
