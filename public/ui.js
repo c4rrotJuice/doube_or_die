@@ -111,6 +111,9 @@ export function setupAuthModal(actions) {
   const closeBtn = document.querySelector('#closeAuthBtn');
   const emailForm = document.querySelector('#magicLinkForm');
   const emailInput = document.querySelector('#emailInput');
+  const passwordForm = document.querySelector('#passwordSignInForm');
+  const passwordEmailInput = document.querySelector('#passwordEmailInput');
+  const passwordInput = document.querySelector('#passwordInput');
   const googleBtn = document.querySelector('#googleSignInBtn');
 
   const open = () => {
@@ -138,6 +141,11 @@ export function setupAuthModal(actions) {
   emailForm?.addEventListener('submit', (event) => {
     event.preventDefault();
     actions.magicLink(emailInput.value.trim());
+  });
+
+  passwordForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    actions.password(passwordEmailInput.value.trim(), passwordInput.value);
   });
 
   googleBtn?.addEventListener('click', () => {
@@ -177,6 +185,7 @@ export function setupProfileOnboardingModal(actions) {
   const form = document.querySelector('#profileForm');
   const usernameInput = document.querySelector('#usernameInput');
   const themeSelect = document.querySelector('#profileThemeSelect');
+  const newPasswordInput = document.querySelector('#newPasswordInput');
 
   const open = () => {
     if (!modal.open) {
@@ -200,6 +209,7 @@ export function setupProfileOnboardingModal(actions) {
     actions.submit({
       username: usernameInput.value.trim(),
       theme: themeSelect.value,
+      password: newPasswordInput.value,
     });
   });
 

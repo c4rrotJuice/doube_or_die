@@ -16,8 +16,10 @@ import {
   getProfile,
   getSession,
   onAuthStateChange,
+  setAccountPassword,
   signInWithGoogle,
   signInWithMagicLink,
+  signInWithPassword,
   signOut,
   supabase,
   upsertProfile,
@@ -51,6 +53,21 @@ const authModal = setupAuthModal({
     toasts.show('success', 'Magic link sent. Check your inbox.');
     authModal.close();
   },
+  async password(email, password) {
+    if (!email || !password) {
+      toasts.show('warning', 'Enter your email and password.');
+      return;
+    }
+
+    const { error } = await signInWithPassword(email, password);
+    if (error) {
+      toasts.show('error', error.message);
+      return;
+    }
+
+    toasts.show('success', 'Signed in successfully.');
+    authModal.close();
+  },
   async google() {
     const { error } = await signInWithGoogle();
     if (error) {
@@ -60,13 +77,18 @@ const authModal = setupAuthModal({
 });
 
 const profileModal = setupProfileOnboardingModal({
-  async submit({ username, theme }) {
+  async submit({ username, theme, password }) {
     if (!authState.user) {
       return;
     }
 
     if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
       toasts.show('warning', 'Username must be 3-24 chars using letters, numbers, or _.');
+      return;
+    }
+
+    if (password && password.length < 8) {
+      toasts.show('warning', 'Password must be at least 8 characters.');
       return;
     }
 
@@ -83,6 +105,13 @@ const profileModal = setupProfileOnboardingModal({
         toasts.show('error', error.message);
       }
       return;
+    }
+
+    if (password) {
+      const { error: passwordError } = await setAccountPassword(password);
+      if (passwordError) {
+        toasts.show('error', `Profile saved, but password update failed: ${passwordError.message}`);
+      }
     }
 
     authState = { ...authState, profile: data };
