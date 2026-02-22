@@ -59,6 +59,7 @@ const runVerification = {
   seasonId: null,
   issuedAtMs: 0,
   events: [],
+  tokenRequest: null,
 };
 
 function normalizeLeaderboardState({ season, rows, playerRank }) {
@@ -295,6 +296,7 @@ function resetRunVerification() {
   runVerification.seasonId = null;
   runVerification.issuedAtMs = 0;
   runVerification.events = [];
+  runVerification.tokenRequest = null;
 }
 
 function recordRunEvent(action, snapshot) {
@@ -321,16 +323,26 @@ async function ensureRunToken() {
     return;
   }
 
-  const { data, error } = await startRun();
-  if (error || !data?.run_token) {
-    toasts.show('warning', error?.message ?? 'Unable to verify run token.');
+  if (runVerification.tokenRequest) {
+    await runVerification.tokenRequest;
     return;
   }
 
-  runVerification.token = data.run_token;
-  runVerification.seasonId = data.season_id ?? null;
-  runVerification.issuedAtMs = Date.now();
-  runVerification.events = [];
+  runVerification.tokenRequest = (async () => {
+    const { data, error } = await startRun();
+    if (error || !data?.run_token) {
+      toasts.show('warning', error?.message ?? 'Unable to verify run token.');
+      return;
+    }
+
+    runVerification.token = data.run_token;
+    runVerification.seasonId = data.season_id ?? null;
+    runVerification.issuedAtMs = Date.now();
+    runVerification.events = [];
+  })();
+
+  await runVerification.tokenRequest;
+  runVerification.tokenRequest = null;
 }
 
 async function submitVerifiedRun(summarySnapshot) {
