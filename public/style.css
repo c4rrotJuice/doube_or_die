@@ -1,11 +1,11 @@
 :root {
-  color-scheme: dark;
   --bg: #09080f;
   --panel: #13111f;
   --text: #eff1ff;
   --muted: #97a0cc;
   --accent: #53f6da;
   --accent-2: #ff4fd8;
+  --danger: #ff4f70;
 }
 
 * {
@@ -20,8 +20,17 @@ body {
   color: var(--text);
 }
 
+body[data-theme='light'] {
+  --bg: #ececf5;
+  --panel: #ffffff;
+  --text: #121222;
+  --muted: #5f6484;
+  --accent: #2ec8a7;
+  --accent-2: #ca4df8;
+}
+
 .shell {
-  width: min(960px, 100%);
+  width: min(880px, 100%);
   margin: 0 auto;
   padding: 2rem 1rem 3rem;
 }
@@ -36,21 +45,56 @@ body {
   margin: 0 0 0.5rem;
   padding: 0.35rem 0.6rem;
   border-radius: 999px;
-  background: rgba(83, 246, 218, 0.15);
+  background: color-mix(in oklab, var(--accent) 20%, transparent);
   color: var(--accent);
   font-size: 0.8rem;
 }
 
-.subtitle {
+.subtitle,
+.message,
+.phase {
   color: var(--muted);
 }
 
 .panel {
   margin-top: 1rem;
   padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
   border-radius: 14px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  background: linear-gradient(145deg, color-mix(in oklab, var(--panel) 93%, white), var(--panel));
+}
+
+.value-display {
+  text-align: center;
+  font-size: clamp(3rem, 12vw, 6rem);
+  font-weight: 800;
+  margin: 1rem 0 0.4rem;
+  letter-spacing: -0.04em;
+}
+
+.risk-meter-wrap {
+  margin: 1rem 0;
+}
+
+.risk-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.risk-meter {
+  height: 16px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--text) 14%, transparent);
+  overflow: hidden;
+}
+
+.risk-fill {
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--danger));
+  transition: width 180ms ease-out;
 }
 
 .actions {
@@ -65,18 +109,24 @@ button {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: #07050f;
   font-weight: 700;
-  padding: 0.7rem 1rem;
+  padding: 0.75rem 1.1rem;
   cursor: pointer;
 }
 
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-pre {
-  margin: 0;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  color: var(--muted);
+.settings-panel {
+  display: grid;
+  gap: 0.6rem;
+}
+
+select {
+  margin-left: 0.35rem;
+}
+
+body[data-reduced-motion='true'] * {
+  transition: none !important;
 }

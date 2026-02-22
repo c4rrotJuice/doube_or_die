@@ -3,42 +3,57 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Don't Get Greedy</title>
+    <title>Double or Die</title>
     <link rel="stylesheet" href="./style.css" />
-    <script>
-      window.__ENV__ = {
-        PUBLIC_SUPABASE_URL: window.localStorage.getItem('PUBLIC_SUPABASE_URL') || '',
-        PUBLIC_SUPABASE_ANON_KEY: window.localStorage.getItem('PUBLIC_SUPABASE_ANON_KEY') || '',
-      };
-    </script>
   </head>
-  <body>
+  <body data-theme="dark" data-reduced-motion="false">
     <main class="shell">
       <header class="hero">
-        <p class="badge">Working title</p>
-        <h1>Don't Get Greedy</h1>
-        <p class="subtitle">Double your score. Cash out before it all disappears.</p>
+        <p class="badge">Offline mode</p>
+        <h1>Double or Die</h1>
+        <p class="subtitle">Push your luck. Bank the multiplier before the crash.</p>
       </header>
 
-      <section class="panel">
-        <h2>Play (coming soon)</h2>
-        <p>
-          Core gameplay loop is intentionally not included in this phase. This page verifies
-          hosting, auth wiring, and leaderboard fetch plumbing.
-        </p>
+      <section class="panel game-panel">
+        <p class="phase">Phase: <strong id="phaseOutput">IDLE</strong></p>
+        <div class="value-display" id="valueOutput">x1</div>
+        <p class="message" id="messageOutput">Press DOUBLE to begin.</p>
+
+        <div class="risk-meter-wrap">
+          <div class="risk-header">
+            <span>Next DOUBLE crash risk</span>
+            <strong id="riskValue">0.0%</strong>
+          </div>
+          <div class="risk-meter">
+            <div class="risk-fill" id="riskFill"></div>
+          </div>
+        </div>
+
         <div class="actions">
-          <button id="loginBtn" type="button">Login</button>
-          <button id="leaderboardBtn" type="button">Leaderboard</button>
+          <button id="doubleBtn" type="button">START + DOUBLE</button>
+          <button id="cashOutBtn" type="button" disabled>CASH OUT</button>
         </div>
       </section>
 
-      <section class="panel" id="statusPanel">
-        <h3>Status</h3>
-        <pre id="statusOutput">Booting...</pre>
+      <section class="panel stats-panel">
+        <h2>Local progress</h2>
+        <p>Best score: <strong id="bestScoreOutput">x1</strong></p>
+        <p>Lifetime banked: <strong id="lifetimeBankedOutput">x0</strong></p>
+        <p>Runs played: <strong id="runsPlayedOutput">0</strong></p>
+      </section>
+
+      <section class="panel settings-panel">
+        <h2>Settings (local only)</h2>
+        <label>Theme
+          <select id="themeSelect">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </label>
+        <label><input id="reducedMotionToggle" type="checkbox" /> Reduced motion</label>
+        <label><input id="soundToggle" type="checkbox" /> Sound (placeholder)</label>
       </section>
     </main>
-    <script src="./env.js"></script>
-<script type="module" src="./supabase.js"></script>
     <script type="module" src="./game.js"></script>
   </body>
 </html>

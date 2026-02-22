@@ -1,56 +1,44 @@
-import { renderStatus, setBusy } from './ui.js';
-import { fetchLeaderboard, getSession, signInWithMagicLink } from './supabase.js';
+import { GameEngine } from './game-logic.js';
+import { applySettings, renderGame, setupSettingsUI } from './ui.js';
+import { loadSettings, loadStats, saveSettings, saveStats, updateStatsForRun } from './storage.js';
 
-const loginBtn = document.querySelector('#loginBtn');
-const leaderboardBtn = document.querySelector('#leaderboardBtn');
-const statusOutput = document.querySelector('#statusOutput');
+const doubleBtn = document.querySelector('#doubleBtn');
+const cashOutBtn = document.querySelector('#cashOutBtn');
 
-const state = {
-  phase: 'bootstrap',
-  session: null,
-  // TODO(phase-2): add round state, score ladder, and crash multiplier state machine.
-};
+const game = new GameEngine();
+let stats = loadStats();
+let settings = loadSettings();
 
-async function bootstrap() {
-  const { data } = await getSession();
-  state.session = data?.session ?? null;
-  state.phase = 'idle';
-  renderStatus(statusOutput, 'Ready', {
-    authenticated: Boolean(state.session),
-    message: 'Placeholder shell loaded. Gameplay arrives in phase 2.',
-  });
+function syncUI() {
+  applySettings(settings);
+  renderGame(game.snapshot(), stats);
 }
 
-loginBtn.dataset.label = 'Login';
-leaderboardBtn.dataset.label = 'Leaderboard';
-
-loginBtn.addEventListener('click', async () => {
-  const email = window.prompt('Enter your email for a magic link:');
-  if (!email) return;
-
-  try {
-    setBusy(loginBtn, true);
-    const result = await signInWithMagicLink(email);
-    renderStatus(statusOutput, 'Magic link requested', result);
-  } catch (error) {
-    renderStatus(statusOutput, 'Login failed', { message: error.message });
-  } finally {
-    setBusy(loginBtn, false);
+function handleRunEnd(snapshotBefore, snapshotAfter) {
+  if (snapshotBefore.phase === 'RUNNING' && snapshotAfter.phase === 'SUMMARY') {
+    stats = updateStatsForRun(stats, snapshotAfter);
+    saveStats(stats);
   }
+}
+
+doubleBtn.addEventListener('click', () => {
+  const before = game.snapshot();
+  const after = game.doubleDown();
+  handleRunEnd(before, after);
+  syncUI();
 });
 
-leaderboardBtn.addEventListener('click', async () => {
-  try {
-    setBusy(leaderboardBtn, true);
-    const result = await fetchLeaderboard();
-    renderStatus(statusOutput, 'Leaderboard payload', result);
-  } catch (error) {
-    renderStatus(statusOutput, 'Leaderboard error', { message: error.message });
-  } finally {
-    setBusy(leaderboardBtn, false);
-  }
+cashOutBtn.addEventListener('click', () => {
+  const before = game.snapshot();
+  const after = game.cashOut();
+  handleRunEnd(before, after);
+  syncUI();
 });
 
-bootstrap().catch((error) => {
-  renderStatus(statusOutput, 'Bootstrap error', { message: error.message });
+setupSettingsUI(settings, (nextSettings) => {
+  settings = nextSettings;
+  saveSettings(settings);
+  syncUI();
 });
+
+syncUI();
