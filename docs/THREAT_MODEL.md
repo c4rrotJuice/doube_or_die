@@ -9,11 +9,11 @@ Complete client-side trust is impossible. Players can inspect and modify browser
 - Edge Functions verify token validity + timing + score sanity before accepting runs.
 - RLS prevents direct client writes to sensitive tables.
 
-## Planned sanity checks in `submitRun`
+## Active sanity checks in `submitRun`
 - Token checks: ownership, TTL, single-use, active season binding.
 - Timing checks: minimum duration thresholds, impossible action cadence rejection.
 - Score checks: score growth limits, doubles-to-score consistency.
-- Replay checks (future): deterministic event log hashing and secret-salted digest validation.
+- Digest checks: structured action/timing log is persisted for audit/replay hardening.
 - Abuse checks: ban flag checks, per-user submission rate limiting.
 
 ## Known risks
@@ -22,4 +22,4 @@ Complete client-side trust is impossible. Players can inspect and modify browser
 - Leaderboard race conditions can occur if crown updates are not transactional.
 
 ## Mitigation direction
-Move critical checks server-side over time, keep client protocol minimal, and prefer append-only run evidence for later audits.
+Continue tightening digest validation (server-side replay and signature validation), and keep token + RLS boundaries as the primary integrity controls.

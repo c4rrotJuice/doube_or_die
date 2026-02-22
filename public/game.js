@@ -24,6 +24,8 @@ import {
   signInWithPassword,
   signUpWithPassword,
   signOut,
+  startRun,
+  submitRun,
   supabase,
   upsertProfile,
 } from './supabase.js';
@@ -46,6 +48,13 @@ let leaderboardState = null;
 let leaderboardCache = { loadedAt: 0, userId: null, payload: null };
 let leaderboardRefreshTimer = null;
 let countdownTimer = null;
+
+const runVerification = {
+  token: null,
+  seasonId: null,
+  issuedAtMs: 0,
+  events: [],
+};
 
 function normalizeLeaderboardState({ season, rows, playerRank }) {
   const entries = rows.map((row, index) => ({
@@ -258,6 +267,84 @@ async function syncAuthState(sessionUser) {
   }
 }
 
+function resetRunVerification() {
+  runVerification.token = null;
+  runVerification.seasonId = null;
+  runVerification.issuedAtMs = 0;
+  runVerification.events = [];
+}
+
+function recordRunEvent(action, snapshot) {
+  if (!runVerification.issuedAtMs) {
+    return;
+  }
+
+  const now = Date.now();
+  runVerification.events.push({
+    action,
+    delta_ms: now - runVerification.issuedAtMs,
+    value: snapshot.value,
+    doubles: snapshot.doubles,
+    phase: snapshot.phase,
+  });
+}
+
+async function ensureRunToken() {
+  if (!authState.user || !supabase) {
+    return;
+  }
+
+  if (runVerification.token) {
+    return;
+  }
+
+  const { data, error } = await startRun();
+  if (error || !data?.run_token) {
+    toasts.show('warning', error?.message ?? 'Unable to verify run token.');
+    return;
+  }
+
+  runVerification.token = data.run_token;
+  runVerification.seasonId = data.season_id ?? null;
+  runVerification.issuedAtMs = Date.now();
+  runVerification.events = [];
+}
+
+async function submitVerifiedRun(summarySnapshot) {
+  if (!authState.user || !supabase || !runVerification.token || !runVerification.issuedAtMs) {
+    resetRunVerification();
+    return;
+  }
+
+  const now = Date.now();
+  const durationMs = Math.max(0, now - runVerification.issuedAtMs);
+  const digestPayload = {
+    v: 1,
+    season_id: runVerification.seasonId,
+    started_at_ms: runVerification.issuedAtMs,
+    duration_ms: durationMs,
+    outcome: summarySnapshot.outcome,
+    actions: runVerification.events,
+  };
+
+  const { error } = await submitRun({
+    run_token: runVerification.token,
+    final_score: summarySnapshot.value,
+    doubles: summarySnapshot.doubles,
+    duration_ms: durationMs,
+    digest: JSON.stringify(digestPayload),
+  });
+
+  if (error) {
+    toasts.show('warning', `Run verification failed: ${error.message}`);
+    resetRunVerification();
+    return;
+  }
+
+  resetRunVerification();
+  loadLeaderboard({ force: true });
+}
+
 function handleRunEnd(snapshotBefore, snapshotAfter) {
   if (snapshotBefore.phase === 'RUNNING' && snapshotAfter.phase === 'SUMMARY') {
     stats = updateStatsForRun(stats, snapshotAfter);
@@ -266,6 +353,7 @@ function handleRunEnd(snapshotBefore, snapshotAfter) {
 
   if (snapshotBefore.phase === 'RUNNING' && snapshotAfter.phase === 'SUMMARY' && snapshotAfter.outcome === 'crashed') {
     animateCrash();
+    resetRunVerification();
     toasts.show('error', 'Crash! Run ended with no banked multiplier.');
   }
 
@@ -274,10 +362,19 @@ function handleRunEnd(snapshotBefore, snapshotAfter) {
   }
 }
 
-function onDouble() {
+async function onDouble() {
   const before = game.snapshot();
+
+  if ((before.phase === 'IDLE' || before.phase === 'SUMMARY') && authState.user) {
+    await ensureRunToken();
+  }
+
   const after = game.doubleDown();
   handleRunEnd(before, after);
+
+  if (before.phase === 'RUNNING' || before.phase === 'IDLE' || before.phase === 'SUMMARY') {
+    recordRunEvent('double', after);
+  }
 
   if (after.phase === 'RUNNING' && after.nextCrashChance >= 0.7) {
     toasts.show('warning', `High risk: ${Math.round(after.nextCrashChance * 100)}% crash chance next DOUBLE.`, 1800);
@@ -286,10 +383,16 @@ function onDouble() {
   syncUI();
 }
 
-function onCashOut() {
+async function onCashOut() {
   const before = game.snapshot();
   const after = game.cashOut();
+  recordRunEvent('cash_out', after);
   handleRunEnd(before, after);
+
+  if (before.phase === 'RUNNING' && after.phase === 'SUMMARY' && after.outcome === 'cashed_out') {
+    await submitVerifiedRun(after);
+  }
+
   syncUI();
 }
 
