@@ -56,7 +56,10 @@ Submit a completed run for verification and leaderboard updates.
 {
   "accepted": true,
   "new_best": true,
-  "crown_stolen": false
+  "crown_stolen": false,
+  "streak_count": 4,
+  "streak_bonus_awarded": false,
+  "crown_run_available_tomorrow": "2026-01-02T00:00:00.000Z"
 }
 ```
 
@@ -110,3 +113,27 @@ Return active-season leaderboard and crown snapshot.
 
 ### Errors
 - `500` database or server configuration error
+
+
+## Social engagement tables/views
+
+### `public.crown_run_attempts`
+- Enforces **1 crown run attempt per user per UTC day** via `(user_id, run_date)` primary key.
+- Recorded from `submit_verified_run` before crown update logic.
+
+### `public.user_cashout_streaks`
+- Tracks `successful_cashouts`, `current_streak`, and `bonus_awards`.
+- `submit_verified_run` increments on each verified cashout and awards a bonus each time `current_streak % 3 = 0`.
+
+### `public.social_events` + `public_social_events_view`
+- Stores lightweight feed events (currently `event_type='dethroned'`).
+- Feed line format in UI: `"<actor> dethroned <target> at <score>"`.
+
+### Share copy template
+Client uses:
+```text
+I just cashed out at x<score> in Double or Die. <streak-line> <vibe-line> 👑
+```
+Where:
+- `<streak-line>` is either streak progress or a 3-cashout bonus message.
+- `<vibe-line>` is a deterministic vibe phrase selected from a small template list.
