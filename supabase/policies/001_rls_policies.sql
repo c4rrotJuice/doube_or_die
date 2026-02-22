@@ -1,2 +1,3 @@
--- Policies are defined in migrations/001_init.sql for one-pass setup.
--- Keep this file as a reference for future policy hardening iterations.
+-- Primary policies are defined in migrations/001_init.sql.
+-- Profile onboarding hardening and auth-related policy updates are in:
+-- migrations/002_auth_profile_onboarding.sql

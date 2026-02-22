@@ -72,8 +72,9 @@ Reload afterwards.
 1. Create a Supabase project.
 2. Apply SQL from `supabase/migrations/001_init.sql`.
 3. Configure auth (Email OTP/magic link + redirect URL allow-list).
-4. Set Edge Function secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
-5. Deploy function stubs:
+4. (Optional) Enable Google provider in Supabase Auth and add the same redirect URL.
+5. Set Edge Function secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
+6. Deploy function stubs:
    ```bash
    supabase functions deploy startRun
    supabase functions deploy submitRun
@@ -81,6 +82,13 @@ Reload afterwards.
    ```
 
 Detailed checklist lives in [`supabase/supabase_notes.md`](./supabase/supabase_notes.md).
+
+
+## Auth UX flow
+- Guests can play fully without signing in (all local state stays in localStorage).
+- Auth modal supports email magic links and Google OAuth.
+- After sign-in, users without a `profiles` row must complete onboarding with a unique username + theme.
+- Header switches from `Guest mode` badge to a user pill showing `username · title`, with sign-out action.
 
 ## Security notes
 - Client **cannot directly write** runs, leaderboard, crown, or run tokens.
