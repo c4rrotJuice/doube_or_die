@@ -20,10 +20,9 @@ import {
   getProfile,
   getSession,
   onAuthStateChange,
-  setAccountPassword,
   signInWithGoogle,
-  signInWithMagicLink,
   signInWithPassword,
+  signUpWithPassword,
   signOut,
   supabase,
   upsertProfile,
@@ -143,24 +142,9 @@ async function loadLeaderboard({ force = false } = {}) {
 }
 
 const authModal = setupAuthModal({
-  async magicLink(email) {
-    if (!email) {
-      toasts.show('warning', 'Enter an email to receive a magic link.');
-      return;
-    }
-
-    const { error } = await signInWithMagicLink(email);
-    if (error) {
-      toasts.show('error', error.message);
-      return;
-    }
-
-    toasts.show('success', 'Magic link sent. Check your inbox.');
-    authModal.close();
-  },
-  async password(email, password) {
+  async signIn(email, password) {
     if (!email || !password) {
-      toasts.show('warning', 'Enter your email and password.');
+      toasts.show('warning', 'Enter your email and password to sign in.');
       return;
     }
 
@@ -173,6 +157,27 @@ const authModal = setupAuthModal({
     toasts.show('success', 'Signed in successfully.');
     authModal.close();
   },
+  async signUp(email, password) {
+    if (!email || !password) {
+      toasts.show('warning', 'Enter your email and password to create an account.');
+      return;
+    }
+
+    if (password.length < 8) {
+      toasts.show('warning', 'Password must be at least 8 characters.');
+      return;
+    }
+
+    const { data, error } = await signUpWithPassword(email, password);
+    if (error) {
+      toasts.show('error', error.message);
+      return;
+    }
+
+    const hasActiveSession = Boolean(data?.session);
+    toasts.show('success', hasActiveSession ? 'Account created. Choose your username next.' : 'Account created. Check your inbox to verify your email.');
+    authModal.close();
+  },
   async google() {
     const { error } = await signInWithGoogle();
     if (error) {
@@ -182,18 +187,13 @@ const authModal = setupAuthModal({
 });
 
 const profileModal = setupProfileOnboardingModal({
-  async submit({ username, theme, password }) {
+  async submit({ username, theme }) {
     if (!authState.user) {
       return;
     }
 
     if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
       toasts.show('warning', 'Username must be 3-24 chars using letters, numbers, or _.');
-      return;
-    }
-
-    if (password && password.length < 8) {
-      toasts.show('warning', 'Password must be at least 8 characters.');
       return;
     }
 
@@ -210,13 +210,6 @@ const profileModal = setupProfileOnboardingModal({
         toasts.show('error', error.message);
       }
       return;
-    }
-
-    if (password) {
-      const { error: passwordError } = await setAccountPassword(password);
-      if (passwordError) {
-        toasts.show('error', `Profile saved, but password update failed: ${passwordError.message}`);
-      }
     }
 
     authState = { ...authState, profile: data };

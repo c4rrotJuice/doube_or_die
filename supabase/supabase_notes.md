@@ -9,7 +9,7 @@
 Run `supabase/migrations/001_init.sql` in SQL Editor (or via CLI `supabase db push`).
 
 ## 3) Configure auth
-- Enable Email OTP / magic link.
+- Enable Email/password authentication.
 - Add your local URL (e.g. `http://localhost:5173`) to redirect allow-list.
 
 ## 4) Edge Function environment variables

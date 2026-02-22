@@ -109,17 +109,18 @@ export function setupAuthModal(actions) {
   const modal = document.querySelector('#authModal');
   const openBtn = document.querySelector('#authBtn');
   const closeBtn = document.querySelector('#closeAuthBtn');
-  const emailForm = document.querySelector('#magicLinkForm');
-  const emailInput = document.querySelector('#emailInput');
-  const passwordForm = document.querySelector('#passwordSignInForm');
-  const passwordEmailInput = document.querySelector('#passwordEmailInput');
-  const passwordInput = document.querySelector('#passwordInput');
+  const signInForm = document.querySelector('#passwordSignInForm');
+  const signInEmailInput = document.querySelector('#passwordEmailInput');
+  const signInPasswordInput = document.querySelector('#passwordInput');
+  const signUpForm = document.querySelector('#passwordSignUpForm');
+  const signUpEmailInput = document.querySelector('#signupEmailInput');
+  const signUpPasswordInput = document.querySelector('#signupPasswordInput');
   const googleBtn = document.querySelector('#googleSignInBtn');
 
   const open = () => {
     if (modal && !modal.open) {
       modal.showModal();
-      emailInput?.focus();
+      signInEmailInput?.focus();
     }
   };
 
@@ -138,14 +139,14 @@ export function setupAuthModal(actions) {
     close();
   });
 
-  emailForm?.addEventListener('submit', (event) => {
+  signInForm?.addEventListener('submit', (event) => {
     event.preventDefault();
-    actions.magicLink(emailInput.value.trim());
+    actions.signIn(signInEmailInput.value.trim(), signInPasswordInput.value);
   });
 
-  passwordForm?.addEventListener('submit', (event) => {
+  signUpForm?.addEventListener('submit', (event) => {
     event.preventDefault();
-    actions.password(passwordEmailInput.value.trim(), passwordInput.value);
+    actions.signUp(signUpEmailInput.value.trim(), signUpPasswordInput.value);
   });
 
   googleBtn?.addEventListener('click', () => {
@@ -185,7 +186,6 @@ export function setupProfileOnboardingModal(actions) {
   const form = document.querySelector('#profileForm');
   const usernameInput = document.querySelector('#usernameInput');
   const themeSelect = document.querySelector('#profileThemeSelect');
-  const newPasswordInput = document.querySelector('#newPasswordInput');
 
   const open = () => {
     if (!modal.open) {
@@ -209,7 +209,6 @@ export function setupProfileOnboardingModal(actions) {
     actions.submit({
       username: usernameInput.value.trim(),
       theme: themeSelect.value,
-      password: newPasswordInput.value,
     });
   });
 
