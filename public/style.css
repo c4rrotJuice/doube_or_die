@@ -254,7 +254,8 @@ input:focus-visible,
     grid-template-areas:
       'hero hero'
       'game stats'
-      'game settings';
+      'game settings'
+      'leaderboard leaderboard';
     padding: 2rem 1rem 4rem;
   }
 
@@ -272,6 +273,10 @@ input:focus-visible,
 
   .settings-panel {
     grid-area: settings;
+  }
+
+  .leaderboard-panel {
+    grid-area: leaderboard;
   }
 }
 
@@ -295,6 +300,75 @@ input:focus-visible,
   50% { opacity: 0.7; }
 }
 
+
+
+.leaderboard-panel {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.leaderboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.leaderboard-header h2 {
+  margin: 0;
+}
+
+.leaderboard-countdown {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.leaderboard-table-wrap {
+  overflow-x: auto;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.94rem;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  padding: 0.52rem 0.35rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
+  text-align: left;
+}
+
+.leaderboard-table td:last-child,
+.leaderboard-table th:last-child {
+  text-align: right;
+}
+
+.leaderboard-rank {
+  width: 4ch;
+  color: var(--muted);
+}
+
+.leaderboard-row.is-crown {
+  background: color-mix(in oklab, var(--warning) 18%, transparent);
+}
+
+.leaderboard-row.is-self {
+  outline: 1px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  outline-offset: -1px;
+}
+
+.crown-icon {
+  margin-right: 0.35rem;
+}
+
+.leaderboard-empty {
+  color: var(--muted);
+  text-align: center;
+}
 body[data-reduced-motion='true'] * {
   transition: none !important;
   animation: none !important;

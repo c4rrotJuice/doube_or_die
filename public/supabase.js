@@ -67,9 +67,25 @@ export async function upsertProfile(profile) {
   return supabase.from('profiles').upsert(profile, { onConflict: 'id' }).select('id, username, theme, title').single();
 }
 
-export async function fetchLeaderboard() {
+export async function fetchSeasonLeaderboard() {
   if (!supabase) throw new Error('Supabase is not configured.');
-  return supabase.functions.invoke('getLeaderboard', { body: {} });
+  return supabase
+    .from('public_leaderboard_view')
+    .select('season_id, season_name, user_id, username, best_score, updated_at, has_crown')
+    .order('best_score', { ascending: false })
+    .order('updated_at', { ascending: true })
+    .limit(50);
+}
+
+export async function fetchActiveSeason() {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  return supabase
+    .from('seasons')
+    .select('id, name, starts_at, ends_at')
+    .eq('is_active', true)
+    .order('starts_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 }
 
 export async function startRun() {

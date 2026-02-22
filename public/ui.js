@@ -271,3 +271,73 @@ export function setupSettingsUI(initialSettings, onChange) {
     onChange(settings);
   });
 }
+
+
+function formatCountdown(msRemaining) {
+  if (msRemaining <= 0) {
+    return 'Season ended';
+  }
+
+  const secondsTotal = Math.floor(msRemaining / 1000);
+  const days = Math.floor(secondsTotal / 86400);
+  const hours = Math.floor((secondsTotal % 86400) / 3600);
+  const minutes = Math.floor((secondsTotal % 3600) / 60);
+
+  if (days > 0) {
+    return `${days}d ${hours}h remaining`;
+  }
+
+  return `${hours}h ${minutes}m remaining`;
+}
+
+export function renderLeaderboard(state) {
+  const countdown = document.querySelector('#seasonCountdown');
+  const summary = document.querySelector('#leaderboardSummary');
+  const rowsRoot = document.querySelector('#leaderboardRows');
+
+  if (!countdown || !summary || !rowsRoot) {
+    return;
+  }
+
+  if (!state) {
+    countdown.textContent = 'Loading season…';
+    summary.textContent = 'Top 50 players this season.';
+    rowsRoot.innerHTML = '<tr><td colspan="3" class="leaderboard-empty">Loading leaderboard…</td></tr>';
+    return;
+  }
+
+  if (state.error) {
+    countdown.textContent = 'Season unavailable';
+    summary.textContent = state.error;
+    rowsRoot.innerHTML = '<tr><td colspan="3" class="leaderboard-empty">Unable to load leaderboard.</td></tr>';
+    return;
+  }
+
+  const seasonName = state.season?.name ?? 'Active season';
+  countdown.textContent = `${seasonName} · ${formatCountdown(state.timeRemainingMs ?? 0)}`;
+
+  const playerRankText = state.playerRank
+    ? `Your rank: #${state.playerRank.rank} (${state.playerRank.score})`
+    : 'Your rank: not ranked yet';
+  summary.textContent = `Top ${state.entries.length} players this season. ${playerRankText}`;
+
+  if (!state.entries.length) {
+    rowsRoot.innerHTML = '<tr><td colspan="3" class="leaderboard-empty">No scores yet this season.</td></tr>';
+    return;
+  }
+
+  rowsRoot.innerHTML = state.entries.map((entry) => {
+    const classes = ['leaderboard-row'];
+    if (entry.hasCrown) classes.push('is-crown');
+    if (entry.isCurrentPlayer) classes.push('is-self');
+
+    const crown = entry.hasCrown ? '<span class="crown-icon" aria-label="Crown holder" title="Crown holder">👑</span>' : '';
+    return `
+      <tr class="${classes.join(' ')}">
+        <td class="leaderboard-rank">#${entry.rank}</td>
+        <td>${crown}${entry.username}</td>
+        <td>${entry.bestScore}</td>
+      </tr>
+    `;
+  }).join('');
+}

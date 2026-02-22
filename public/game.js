@@ -5,6 +5,7 @@ import {
   createToastSystem,
   renderAuthState,
   renderGame,
+  renderLeaderboard,
   setupAuthModal,
   setupHowToPlayModal,
   setupKeyboardSupport,
@@ -13,6 +14,8 @@ import {
 } from './ui.js';
 import { loadSettings, loadStats, saveSettings, saveStats, updateStatsForRun } from './storage.js';
 import {
+  fetchActiveSeason,
+  fetchSeasonLeaderboard,
   getProfile,
   getSession,
   onAuthStateChange,
@@ -36,6 +39,96 @@ let stats = loadStats();
 let settings = loadSettings();
 let previousSnapshot = null;
 let authState = { user: null, profile: null };
+
+
+const LEADERBOARD_CACHE_MS = 45_000;
+let leaderboardState = null;
+let leaderboardCache = { loadedAt: 0, payload: null };
+let leaderboardRefreshTimer = null;
+let countdownTimer = null;
+
+function normalizeLeaderboardState({ season, rows }) {
+  const entries = rows.map((row, index) => ({
+    rank: index + 1,
+    userId: row.user_id,
+    username: row.username,
+    bestScore: row.best_score,
+    hasCrown: row.has_crown,
+    isCurrentPlayer: Boolean(authState.user && row.user_id === authState.user.id),
+  }));
+
+  const playerEntry = entries.find((entry) => entry.isCurrentPlayer);
+
+  return {
+    season,
+    entries,
+    timeRemainingMs: season ? Math.max(0, new Date(season.ends_at).getTime() - Date.now()) : 0,
+    playerRank: playerEntry ? { rank: playerEntry.rank, score: playerEntry.bestScore } : null,
+  };
+}
+
+function scheduleLeaderboardRefresh() {
+  if (leaderboardRefreshTimer) {
+    window.clearTimeout(leaderboardRefreshTimer);
+  }
+
+  leaderboardRefreshTimer = window.setTimeout(() => {
+    loadLeaderboard({ force: true });
+  }, LEADERBOARD_CACHE_MS);
+}
+
+function startCountdownTicker() {
+  if (countdownTimer) {
+    window.clearInterval(countdownTimer);
+  }
+
+  countdownTimer = window.setInterval(() => {
+    if (!leaderboardState?.season) {
+      return;
+    }
+
+    leaderboardState = {
+      ...leaderboardState,
+      timeRemainingMs: Math.max(0, new Date(leaderboardState.season.ends_at).getTime() - Date.now()),
+    };
+    renderLeaderboard(leaderboardState);
+  }, 1_000);
+}
+
+async function loadLeaderboard({ force = false } = {}) {
+  if (!supabase) {
+    leaderboardState = { error: 'Connect Supabase to view leaderboard.' };
+    renderLeaderboard(leaderboardState);
+    return;
+  }
+
+  const isCacheFresh = Date.now() - leaderboardCache.loadedAt < LEADERBOARD_CACHE_MS;
+  if (!force && isCacheFresh && leaderboardCache.payload) {
+    leaderboardState = normalizeLeaderboardState(leaderboardCache.payload);
+    renderLeaderboard(leaderboardState);
+    return;
+  }
+
+  const [{ data: season, error: seasonError }, { data: rows, error: leaderboardError }] = await Promise.all([
+    fetchActiveSeason(),
+    fetchSeasonLeaderboard(),
+  ]);
+
+  if (seasonError || leaderboardError) {
+    leaderboardState = { error: seasonError?.message ?? leaderboardError?.message ?? 'Unable to load leaderboard.' };
+    renderLeaderboard(leaderboardState);
+    return;
+  }
+
+  leaderboardCache = {
+    loadedAt: Date.now(),
+    payload: { season, rows: rows ?? [] },
+  };
+
+  leaderboardState = normalizeLeaderboardState(leaderboardCache.payload);
+  renderLeaderboard(leaderboardState);
+  scheduleLeaderboardRefresh();
+}
 
 const authModal = setupAuthModal({
   async magicLink(email) {
@@ -129,12 +222,14 @@ function syncUI() {
   const snapshot = game.snapshot();
   renderGame(snapshot, stats, previousSnapshot);
   previousSnapshot = snapshot;
+  renderLeaderboard(leaderboardState);
 }
 
 async function syncAuthState(sessionUser) {
   if (!sessionUser) {
     authState = { user: null, profile: null };
     syncUI();
+    loadLeaderboard({ force: true });
     return;
   }
 
@@ -151,6 +246,7 @@ async function syncAuthState(sessionUser) {
   }
 
   syncUI();
+  loadLeaderboard({ force: true });
 
   if (!profile) {
     profileModal.open();
@@ -244,3 +340,5 @@ async function bootstrapAuth() {
 
 bootstrapAuth();
 syncUI();
+loadLeaderboard();
+startCountdownTicker();
