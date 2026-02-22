@@ -100,18 +100,22 @@
 
     <dialog id="authModal" class="how-to-play-modal" aria-labelledby="authTitle">
       <h2 id="authTitle">Sign in</h2>
-      <p class="modal-hint">Use a magic link, continue with Google, or sign in with email + password.</p>
-      <form id="magicLinkForm" class="auth-form">
-        <label for="emailInput">Email</label>
-        <input id="emailInput" type="email" required placeholder="you@example.com" />
-        <button type="submit">Send magic link</button>
-      </form>
+      <p class="modal-hint">Sign in or create an account with email + password, or continue with Google.</p>
       <form id="passwordSignInForm" class="auth-form">
+        <h3>Sign in</h3>
         <label for="passwordEmailInput">Email</label>
-        <input id="passwordEmailInput" type="email" required placeholder="you@example.com" />
+        <input id="passwordEmailInput" type="email" required placeholder="you@example.com" autocomplete="email" />
         <label for="passwordInput">Password</label>
         <input id="passwordInput" type="password" required minlength="8" autocomplete="current-password" />
         <button type="submit">Sign in with password</button>
+      </form>
+      <form id="passwordSignUpForm" class="auth-form">
+        <h3>Create account</h3>
+        <label for="signupEmailInput">Email</label>
+        <input id="signupEmailInput" type="email" required placeholder="you@example.com" autocomplete="email" />
+        <label for="signupPasswordInput">Password</label>
+        <input id="signupPasswordInput" type="password" required minlength="8" autocomplete="new-password" />
+        <button type="submit">Sign up with password</button>
       </form>
       <button id="googleSignInBtn" type="button" class="google-btn">Continue with Google</button>
       <form method="dialog" class="modal-actions">
@@ -121,7 +125,7 @@
 
     <dialog id="profileModal" class="how-to-play-modal" aria-labelledby="profileTitle">
       <h2 id="profileTitle">Complete your profile</h2>
-      <p class="modal-hint">Pick a unique username/theme and optionally set a password for future sign-ins.</p>
+      <p class="modal-hint">Pick a unique username and theme to complete your profile.</p>
       <form id="profileForm" class="auth-form">
         <label for="usernameInput">Username</label>
         <input id="usernameInput" type="text" minlength="3" maxlength="24" required pattern="[a-zA-Z0-9_]{3,24}" />
@@ -130,8 +134,6 @@
           <option value="dark">Dark</option>
           <option value="light">Light</option>
         </select>
-        <label for="newPasswordInput">Password (optional)</label>
-        <input id="newPasswordInput" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters" />
         <button type="submit">Save profile</button>
       </form>
     </dialog>

@@ -71,7 +71,7 @@ Reload afterwards.
 ## Supabase setup overview
 1. Create a Supabase project.
 2. Apply SQL from `supabase/migrations/001_init.sql`.
-3. Configure auth (Email OTP/magic link + redirect URL allow-list).
+3. Configure auth (Email/password + redirect URL allow-list).
 4. (Optional) Enable Google provider in Supabase Auth and add the same redirect URL.
 5. Set Edge Function secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`).
 6. Deploy function stubs:
@@ -86,8 +86,8 @@ Detailed checklist lives in [`supabase/supabase_notes.md`](./supabase/supabase_n
 
 ## Auth UX flow
 - Guests can play fully without signing in (all local state stays in localStorage).
-- Auth modal supports email magic links and Google OAuth.
-- After sign-in, users without a `profiles` row must complete onboarding with a unique username + theme.
+- Auth modal supports email/password sign-in + sign-up and Google OAuth.
+- After sign-up/sign-in, users without a `profiles` row must complete onboarding with a unique username + theme.
 - Header switches from `Guest mode` badge to a user pill showing `username · title`, with sign-out action.
 
 ## Security notes

@@ -17,11 +17,6 @@ function getRedirectUrl() {
   return window.location.origin;
 }
 
-export async function signInWithMagicLink(email) {
-  if (!supabase) throw new Error('Supabase is not configured.');
-  return supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: getRedirectUrl() } });
-}
-
 export async function signInWithGoogle() {
   if (!supabase) throw new Error('Supabase is not configured.');
   return supabase.auth.signInWithOAuth({
@@ -35,9 +30,13 @@ export async function signInWithPassword(email, password) {
   return supabase.auth.signInWithPassword({ email, password });
 }
 
-export async function setAccountPassword(password) {
+export async function signUpWithPassword(email, password) {
   if (!supabase) throw new Error('Supabase is not configured.');
-  return supabase.auth.updateUser({ password });
+  return supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: getRedirectUrl() },
+  });
 }
 
 export async function signOut() {

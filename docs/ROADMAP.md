@@ -11,7 +11,7 @@
 - Persist recent local sessions for fast rematches.
 
 ## Phase 3 — Auth + leaderboard reads
-- Improve login UX (magic link flow + profile bootstrap).
+- Improve login UX (email/password + Google auth and profile bootstrap).
 - Show active season leaderboard and crown in app.
 - Add loading/error states tuned for mobile.
 
