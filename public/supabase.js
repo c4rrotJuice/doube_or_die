@@ -88,6 +88,51 @@ export async function fetchActiveSeason() {
     .maybeSingle();
 }
 
+export async function fetchPlayerSeasonRank({ seasonId, userId }) {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  if (!seasonId || !userId) {
+    return { data: null, error: null };
+  }
+
+  const { data: playerEntry, error: playerError } = await supabase
+    .from('public_leaderboard_view')
+    .select('best_score, updated_at')
+    .eq('season_id', seasonId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (playerError || !playerEntry) {
+    return { data: null, error: playerError };
+  }
+
+  const [{ count: higherScoreCount, error: higherScoreError }, { count: earlierTieCount, error: earlierTieError }] =
+    await Promise.all([
+      supabase
+        .from('public_leaderboard_view')
+        .select('*', { count: 'exact', head: true })
+        .eq('season_id', seasonId)
+        .gt('best_score', playerEntry.best_score),
+      supabase
+        .from('public_leaderboard_view')
+        .select('*', { count: 'exact', head: true })
+        .eq('season_id', seasonId)
+        .eq('best_score', playerEntry.best_score)
+        .lt('updated_at', playerEntry.updated_at),
+    ]);
+
+  if (higherScoreError || earlierTieError) {
+    return { data: null, error: higherScoreError ?? earlierTieError };
+  }
+
+  return {
+    data: {
+      rank: (higherScoreCount ?? 0) + (earlierTieCount ?? 0) + 1,
+      score: playerEntry.best_score,
+    },
+    error: null,
+  };
+}
+
 export async function startRun() {
   if (!supabase) throw new Error('Supabase is not configured.');
   return supabase.functions.invoke('startRun', { body: {} });

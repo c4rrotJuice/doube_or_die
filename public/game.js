@@ -15,6 +15,7 @@ import {
 import { loadSettings, loadStats, saveSettings, saveStats, updateStatsForRun } from './storage.js';
 import {
   fetchActiveSeason,
+  fetchPlayerSeasonRank,
   fetchSeasonLeaderboard,
   getProfile,
   getSession,
@@ -43,11 +44,11 @@ let authState = { user: null, profile: null };
 
 const LEADERBOARD_CACHE_MS = 45_000;
 let leaderboardState = null;
-let leaderboardCache = { loadedAt: 0, payload: null };
+let leaderboardCache = { loadedAt: 0, userId: null, payload: null };
 let leaderboardRefreshTimer = null;
 let countdownTimer = null;
 
-function normalizeLeaderboardState({ season, rows }) {
+function normalizeLeaderboardState({ season, rows, playerRank }) {
   const entries = rows.map((row, index) => ({
     rank: index + 1,
     userId: row.user_id,
@@ -57,13 +58,11 @@ function normalizeLeaderboardState({ season, rows }) {
     isCurrentPlayer: Boolean(authState.user && row.user_id === authState.user.id),
   }));
 
-  const playerEntry = entries.find((entry) => entry.isCurrentPlayer);
-
   return {
     season,
     entries,
     timeRemainingMs: season ? Math.max(0, new Date(season.ends_at).getTime() - Date.now()) : 0,
-    playerRank: playerEntry ? { rank: playerEntry.rank, score: playerEntry.bestScore } : null,
+    playerRank: playerRank ?? null,
   };
 }
 
@@ -103,7 +102,8 @@ async function loadLeaderboard({ force = false } = {}) {
   }
 
   const isCacheFresh = Date.now() - leaderboardCache.loadedAt < LEADERBOARD_CACHE_MS;
-  if (!force && isCacheFresh && leaderboardCache.payload) {
+  const cacheKey = authState.user?.id ?? null;
+  if (!force && isCacheFresh && leaderboardCache.payload && leaderboardCache.userId === cacheKey) {
     leaderboardState = normalizeLeaderboardState(leaderboardCache.payload);
     renderLeaderboard(leaderboardState);
     return;
@@ -120,9 +120,21 @@ async function loadLeaderboard({ force = false } = {}) {
     return;
   }
 
+  const { data: playerRank, error: playerRankError } = await fetchPlayerSeasonRank({
+    seasonId: season?.id ?? null,
+    userId: authState.user?.id ?? null,
+  });
+
+  if (playerRankError) {
+    leaderboardState = { error: playerRankError.message ?? 'Unable to load leaderboard.' };
+    renderLeaderboard(leaderboardState);
+    return;
+  }
+
   leaderboardCache = {
     loadedAt: Date.now(),
-    payload: { season, rows: rows ?? [] },
+    userId: cacheKey,
+    payload: { season, rows: rows ?? [], playerRank },
   };
 
   leaderboardState = normalizeLeaderboardState(leaderboardCache.payload);
