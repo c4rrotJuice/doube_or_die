@@ -141,3 +141,13 @@ export async function submitRun(payload) {
   if (!supabase) throw new Error('Supabase is not configured.');
   return supabase.functions.invoke('submitRun', { body: payload });
 }
+
+
+export async function fetchSocialEvents() {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  return supabase
+    .from('public_social_events_view')
+    .select('id, event_type, score, created_at, actor_username, target_username')
+    .order('created_at', { ascending: false })
+    .limit(25);
+}

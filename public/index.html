@@ -71,6 +71,18 @@
         <label><input id="soundToggle" type="checkbox" aria-label="Enable sound" /> Sound (placeholder)</label>
       </section>
 
+
+      <section class="panel social-panel" aria-label="Social feed and sharing">
+        <div class="social-header">
+          <h2>Social feed</h2>
+          <button id="shareScoreBtn" class="ghost-btn" type="button">Share latest run</button>
+        </div>
+        <p id="sharePreview" class="modal-hint">Play a verified run to unlock a share message.</p>
+        <ul id="socialFeed" class="social-feed" aria-live="polite">
+          <li class="social-feed-empty">No social moments yet.</li>
+        </ul>
+      </section>
+
       <section class="panel leaderboard-panel" aria-label="Season leaderboard">
         <div class="leaderboard-header">
           <h2>Season leaderboard</h2>

@@ -340,3 +340,46 @@ export function renderLeaderboard(state) {
     `;
   }).join('');
 }
+
+
+function formatEventTimestamp(isoString) {
+  const timestamp = new Date(isoString);
+  if (Number.isNaN(timestamp.getTime())) {
+    return 'just now';
+  }
+  return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export function renderSocialFeed(events) {
+  const root = document.querySelector('#socialFeed');
+  if (!root) return;
+
+  if (!events?.length) {
+    root.innerHTML = '<li class="social-feed-empty">No social moments yet.</li>';
+    return;
+  }
+
+  root.innerHTML = events.map((event) => {
+    if (event.event_type === 'dethroned') {
+      const actor = event.actor_username ?? 'Unknown';
+      const target = event.target_username ?? 'the crown';
+      return `<li>${actor} dethroned ${target} at ${event.score} · ${formatEventTimestamp(event.created_at)}</li>`;
+    }
+
+    return `<li>New event at ${event.score}</li>`;
+  }).join('');
+}
+
+export function buildShareCopyTemplate({ score, streakCount = 0, streakBonusAwarded = false }) {
+  const vibes = [
+    'vibe: ice-cold hands, hot doubles',
+    'vibe: pure chaos, somehow controlled',
+    'vibe: pressure makes diamonds',
+  ];
+  const vibeLine = vibes[Math.abs(Number(score) || 0) % vibes.length];
+  const streakLine = streakBonusAwarded
+    ? `🔥 3-cashout streak bonus unlocked (streak ${streakCount}).`
+    : `Current cashout streak: ${streakCount}.`;
+
+  return `I just cashed out at x${score} in Double or Die. ${streakLine} ${vibeLine} 👑`;
+}

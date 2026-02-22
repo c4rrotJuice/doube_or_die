@@ -158,7 +158,14 @@ Deno.serve(async (req) => {
 
   const result = submitResult[0];
 
-  return new Response(JSON.stringify({ accepted: true, new_best: result.new_best, crown_stolen: result.crown_stolen }), {
+  return new Response(JSON.stringify({
+    accepted: true,
+    new_best: result.new_best,
+    crown_stolen: result.crown_stolen,
+    streak_count: result.streak_count,
+    streak_bonus_awarded: result.streak_bonus_awarded,
+    crown_run_available_tomorrow: result.crown_run_available_tomorrow,
+  }), {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });

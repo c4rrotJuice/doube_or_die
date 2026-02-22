@@ -6,6 +6,8 @@ import {
   renderAuthState,
   renderGame,
   renderLeaderboard,
+  renderSocialFeed,
+  buildShareCopyTemplate,
   setupAuthModal,
   setupHowToPlayModal,
   setupKeyboardSupport,
@@ -15,6 +17,7 @@ import {
 import { loadSettings, loadStats, saveSettings, saveStats, updateStatsForRun } from './storage.js';
 import {
   fetchActiveSeason,
+  fetchSocialEvents,
   fetchPlayerSeasonRank,
   fetchSeasonLeaderboard,
   getProfile,
@@ -33,6 +36,7 @@ import {
 const doubleBtn = document.querySelector('#doubleBtn');
 const cashOutBtn = document.querySelector('#cashOutBtn');
 const signOutBtn = document.querySelector('#signOutBtn');
+const shareScoreBtn = document.querySelector('#shareScoreBtn');
 
 const game = new GameEngine();
 const toasts = createToastSystem();
@@ -48,6 +52,7 @@ let leaderboardState = null;
 let leaderboardCache = { loadedAt: 0, userId: null, payload: null };
 let leaderboardRefreshTimer = null;
 let countdownTimer = null;
+let latestShareText = '';
 
 const runVerification = {
   token: null,
@@ -72,6 +77,24 @@ function normalizeLeaderboardState({ season, rows, playerRank }) {
     timeRemainingMs: season ? Math.max(0, new Date(season.ends_at).getTime() - Date.now()) : 0,
     playerRank: playerRank ?? null,
   };
+}
+
+
+
+async function loadSocialFeed() {
+  if (!supabase) {
+    renderSocialFeed([]);
+    return;
+  }
+
+  const { data, error } = await fetchSocialEvents();
+  if (error) {
+    toasts.show('warning', `Social feed unavailable: ${error.message}`);
+    renderSocialFeed([]);
+    return;
+  }
+
+  renderSocialFeed(data ?? []);
 }
 
 function scheduleLeaderboardRefresh() {
@@ -327,7 +350,7 @@ async function submitVerifiedRun(summarySnapshot) {
     actions: runVerification.events,
   };
 
-  const { error } = await submitRun({
+  const { data: result, error } = await submitRun({
     run_token: runVerification.token,
     final_score: summarySnapshot.value,
     doubles: summarySnapshot.doubles,
@@ -341,8 +364,34 @@ async function submitVerifiedRun(summarySnapshot) {
     return;
   }
 
+  const streakCount = Number(result.streak_count ?? 0);
+  const streakBonusAwarded = Boolean(result.streak_bonus_awarded);
+
+  if (streakBonusAwarded) {
+    toasts.show('success', `Streak bonus! ${streakCount} successful cashouts.`);
+  }
+
+  latestShareText = buildShareCopyTemplate({
+    score: summarySnapshot.value,
+    streakCount,
+    streakBonusAwarded,
+  });
+
+  const sharePreview = document.querySelector('#sharePreview');
+  if (sharePreview) {
+    sharePreview.textContent = latestShareText;
+  }
+
+  if (result.crown_stolen) {
+    const availableTomorrow = result.crown_run_available_tomorrow
+      ? new Date(result.crown_run_available_tomorrow).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : 'tomorrow';
+    toasts.show('success', `Crown Run used. Next crown attempt opens ${availableTomorrow} UTC.`);
+  }
+
   resetRunVerification();
   loadLeaderboard({ force: true });
+  loadSocialFeed();
 }
 
 function handleRunEnd(snapshotBefore, snapshotAfter) {
@@ -398,6 +447,24 @@ async function onCashOut() {
 
 doubleBtn.addEventListener('click', onDouble);
 cashOutBtn.addEventListener('click', onCashOut);
+shareScoreBtn?.addEventListener('click', async () => {
+  if (!latestShareText) {
+    toasts.show('warning', 'Complete a verified cashout to generate share copy.');
+    return;
+  }
+
+  try {
+    if (navigator.share) {
+      await navigator.share({ text: latestShareText });
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(latestShareText);
+      toasts.show('success', 'Share copy copied to clipboard.');
+    }
+  } catch (_error) {
+    toasts.show('warning', 'Share cancelled.');
+  }
+});
+
 signOutBtn.addEventListener('click', async () => {
   const { error } = await signOut();
   if (error) {
@@ -449,4 +516,5 @@ async function bootstrapAuth() {
 bootstrapAuth();
 syncUI();
 loadLeaderboard();
+loadSocialFeed();
 startCountdownTicker();
